@@ -104,4 +104,4 @@ if __name__ == '__main__':
 	result['active_ios'] = active_ios.count()
 	result['abnormal_ios'] = active_ios.where(active_ios.flag == 1).count()
 	result = sc.parallelize([result]).map(transform_to_row).toDF()
-	result.repartition(1).write.csv('/user/ronghui_safe/rlab/stats_report/device_count/{0}'.format(args.query_month), header=True)
+	result.repartition(1).write.csv('/user/ronghui_safe/rlab/stats_report/device_stats/device_count_{0}'.format(args.query_month), header=True)
