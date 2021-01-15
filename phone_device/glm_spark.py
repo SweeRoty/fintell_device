@@ -43,12 +43,13 @@ if __name__ == '__main__':
 	parser.add_argument('--prefix', type=str, choices=['sampled', 'all'], default='sampled')
 	parser.add_argument('--mode', type=str, choices=['train', 'test'], default='train')
 	parser.add_argument('--save_model', action='store_true', default=False)
+	parser.add_argument('--true_label', action='store_true', default=False)
 	args = parser.parse_args()
 	month_end = str(monthrange(int(args.query_month[:4]), int(args.query_month[4:6]))[1])
 	data_date = args.query_month+month_end
 
 	print('====> Start computation')
-	dataset = spark.read.csv('/user/ronghui_safe/hgy/nid/datasets/{}_{}'.format(args.prefix, args.query_month), header=True, inferSchema=True)
+	dataset = spark.read.csv('/user/ronghui_safe/hgy/nid/datasets/{}_{}_{}'.format(args.prefix, args.query_month, args.mode), header=True, inferSchema=True)
 	#if args.mode == 'train':
 	dataset = dataset.withColumn('duration', F.when(F.col('duration') == 0, 1e-6).otherwise(F.col('duration')))
 	dataset = dataset.withColumn('duration', F.log(F.lit(1e-6))/F.col('duration'))
@@ -102,6 +103,7 @@ if __name__ == '__main__':
 		#glr_model = GeneralizedLinearRegressionModel.load('/user/ronghui_safe/hgy/nid/models/glm_binomial_model')
 		glr_model = TrainValidationSplitModel.load('/user/ronghui_safe/hgy/nid/models/glm_binomial_model')
 		dataset = glr_model.transform(dataset).select(F.col('duration'), F.col('prediction'), F.col('key')).cache()
-		evaluator = RegressionEvaluator(predictionCol='prediction', labelCol='duration', metricName='mae')
-		print('----> The performance on the whole dataset is {}'.format(round(evaluator.evaluate(dataset), 4)))
+		if args.true_label:
+			evaluator = RegressionEvaluator(predictionCol='prediction', labelCol='duration', metricName='r2')
+			print('----> The performance on the whole dataset is {}'.format(round(evaluator.evaluate(dataset), 4)))
 		dataset.drop('duration').repartition(50).write.csv('/user/ronghui_safe/hgy/nid/weights/{}_{}'.format(args.prefix, args.query_month), header=True)
