@@ -155,7 +155,8 @@ if __name__ == '__main__':
 	print('====> Parsing local arguments')
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--query_month', type=str, help='The format should be YYYYmm')
-	parser.add_argument('--mode', type=str, choices=['bias', 'label'])
+	parser.add_argument('--kind', type=str, choices=['bias', 'sample'])
+	parser.add_argument('--mode', type=str, choices=['train', 'test'])
 	args = parser.parse_args()
 	month_end = str(monthrange(int(args.query_month[:4]), int(args.query_month[4:6]))[1])
 	data_date = args.query_month+month_end
@@ -164,28 +165,32 @@ if __name__ == '__main__':
 	end_date = datetime.strptime('{} 23:59:59'.format(data_date), '%Y%m%d %H:%M:%S')
 	end_time = time.mktime(end_date.timetuple())
 	end_date = end_date.strftime('%Y-%m-%d')
-	window_size = args.window_days*24*3600
 
 	print('====> Start computation')
 	pairs = getAndroidPairs(spark, data_date)
 	#pairs = pairs.withColumn('source', F.when(pairs.source.isNull(), 'null').otherwise(pairs.source))
-	if args.mode == 'bias':
+	if args.kind == 'bias':
 		phones = spark.read.csv('/user/ronghui_safe/hgy/nid/samples/{}'.format(args.query_month), header=True).select('phone_salt').distinct()
 		pairs = pairs.join(phones, on='phone_salt', how='inner')
 		features = pairs.rdd.map(lambda row: (row['phone_salt'], row)).groupByKey().flatMap(generateBias).toDF()
 		features.repartition(50).write.csv('/user/ronghui_safe/hgy/nid/features/bias_{}'.format(args.query_month), header=True)
 	else:
-		phones = spark.read.csv('/user/ronghui_safe/hgy/nid/active_phone_imei_count_{}'.format(args.query_month), header=True) \
-				.where(F.col('imei_count').between(2, 120)) \
-				.select(F.col('phone').alias('phone_salt')) \
-				#.sample(False, 0.05, 11267)
+		phones = spark.read.csv('/user/ronghui_safe/hgy/nid/active_phone_imei_count_{}'.format(args.query_month), header=True)
+		if args.mode == 'train':
+			phones = phones.where(F.col('imei_count').between(2, 120))
+		phones = phones.select(F.col('phone').alias('phone_salt'))#.sample(False, 0.05, 11267)
 		pairs = pairs.join(phones, on='phone_salt', how='inner')
-		labels = pairs.rdd.map(lambda row: (row['phone_salt'], row)).groupByKey().flatMap(generateLabels).toDF()
-		phone_min_itime = pairs.rdd \
-								.map(lambda row: (row['phone_salt'], row['itime'])) \
-								.reduceByKey(lambda x, y: min(x, y)) \
-								.map(lambda t: Row(phone_salt=t[0], min_itime=t[1])) \
-								.toDF() \
-								.where(F.col('min_itime') >= begin_time)
-		labels = labels.join(phone_min_itime, on='phone_salt', how='inner')
-		labels.repartition(50).write.csv('/user/ronghui_safe/hgy/nid/samples/{}'.format(args.query_month), header=True)
+		samples = None
+		if args.mode == 'train':
+			samples = pairs.rdd.map(lambda row: (row['phone_salt'], row)).groupByKey().flatMap(generateLabels).toDF()
+			phone_min_itime = pairs.rdd \
+									.map(lambda row: (row['phone_salt'], row['itime'])) \
+									.reduceByKey(lambda x, y: min(x, y)) \
+									.map(lambda t: Row(phone_salt=t[0], min_itime=t[1])) \
+									.toDF() \
+									.where(F.col('min_itime') >= begin_time)
+			samples = samples.join(phone_min_itime, on='phone_salt', how='inner')
+		else:
+			samples = pairs.withColumn('duration', F.lit(-1))
+			samples = samples.select(['source', 'duration', 'phone_salt', 'imei', 'itime'])
+		samples.repartition(50).write.csv('/user/ronghui_safe/hgy/nid/samples/{}_{}'.format(args.query_month, args.mode), header=True)
