@@ -173,7 +173,7 @@ if __name__ == '__main__':
 		phones = spark.read.csv('/user/ronghui_safe/hgy/nid/samples/{}'.format(args.query_month), header=True).select('phone_salt').distinct()
 		pairs = pairs.join(phones, on='phone_salt', how='inner')
 		features = pairs.rdd.map(lambda row: (row['phone_salt'], row)).groupByKey().flatMap(generateBias).toDF()
-		features.repartition(50).write.csv('/user/ronghui_safe/hgy/nid/features/bias_{}'.format(args.query_month), header=True)
+		features.repartition(50).write.csv('/user/ronghui_safe/hgy/nid/features/bias_{}_{}'.format(args.query_month, args.mode), header=True)
 	else:
 		phones = spark.read.csv('/user/ronghui_safe/hgy/nid/active_phone_imei_count_{}'.format(args.query_month), header=True)
 		if args.mode == 'train':
