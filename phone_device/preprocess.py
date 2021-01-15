@@ -6,7 +6,7 @@ import argparse
 
 from pyspark import SparkConf
 from pyspark.ml.feature import PCA, PCAModel
-from pyspark.ml.feature import StandardScaler
+from pyspark.ml.feature import StandardScaler, StandardScalerModel
 from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.stat import Correlation
 from pyspark.sql import functions as F
@@ -63,9 +63,14 @@ if __name__ == '__main__':
 		feature_cols = [col for col in features.columns if 'in' in col]
 		assembler = VectorAssembler(inputCols=feature_cols, outputCol='feature_vec')
 		features = assembler.transform(features).select('key', 'feature_vec')
-		scaler = StandardScaler(inputCol='feature_vec', outputCol='scaled_feature_vec', withStd=False, withMean=True)
-		scalerModel = scaler.fit(features)
-		features = scalerModel.transform(features).select('key', 'scaled_feature_vec')
+		scaler_model = None
+		if args.mode == 'train':
+			scaler = StandardScaler(inputCol='feature_vec', outputCol='scaled_feature_vec', withStd=False, withMean=True)
+			scaler_model = scaler.fit(features)
+			scaler_model.save('/user/ronghui_safe/hgy/nid/models/scaler_pca_model')
+		else:
+			scaler_model = StandardScalerModel.load('/user/ronghui_safe/hgy/nid/models/scaler_pca_model')
+		features = scaler_model.transform(features).select('key', 'scaled_feature_vec')
 		pca_model = None
 		if args.mode == 'train':
 			pca = PCA(k=len(feature_cols), inputCol='scaled_feature_vec', outputCol='components')
