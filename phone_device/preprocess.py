@@ -43,7 +43,7 @@ if __name__ == '__main__':
 	data_date = args.query_month+month_end
 
 	print('====> Start computation')
-	samples = spark.read.csv('/user/ronghui_safe/hgy/nid/samples/{}'.format(args.query_month), header=True)
+	samples = spark.read.csv('/user/ronghui_safe/hgy/nid/samples/{}_{}'.format(args.query_month, args.mode), header=True)
 	samples = samples.withColumn('key', F.concat_ws('_', F.col('phone_salt'), F.col('imei'), F.col('itime'), F.col('source')))
 	samples = samples.withColumn('duration', F.round(F.col('duration')/F.lit(24*3600), scale=2))
 	samples = samples.withColumn('itime', F.col('itime').cast(IntegerType()))
@@ -55,7 +55,7 @@ if __name__ == '__main__':
 		quantiles = samples.approxQuantile('duration', [1.0, 0.99, 0.9, 0.75, 0.5, 0.25, 0.1, 0.01, 0.0], 0.002)
 		for i, percentile in enumerate([1.0, 0.99, 0.9, 0.75, 0.5, 0.25, 0.1, 0.01, 0.0]):
 			 print('----> Quantile for {} is {}'.format(percentile, quantiles[i]))
-	features = spark.read.csv('/user/ronghui_safe/hgy/nid/features/bias_{}'.format(args.query_month), header=True, inferSchema=True)
+	features = spark.read.csv('/user/ronghui_safe/hgy/nid/features/bias_{}_{}'.format(args.query_month, args.mode), header=True, inferSchema=True)
 	features = features.withColumn('key', F.concat_ws('_', F.col('phone_salt'), F.col('imei'), F.col('itime'), F.col('source')))
 	for col in ['phone_salt', 'imei', 'itime', 'source']:
 		features = features.drop(col)
@@ -77,4 +77,4 @@ if __name__ == '__main__':
 			print('----> Explained variance is {}'.format(pca_model.explainedVariance.toArray().tolist()))
 		features = pca_model.transform(features).select('key', 'components').rdd.map(lambda row: Row(key=row['key'], PC1=round(row['components'][0], 4), PC2=round(row['components'][1], 4))).toDF()
 	samples = samples.join(features, on='key', how='inner')
-	samples.repartition(1).write.csv('/user/ronghui_safe/hgy/nid/datasets/{}_{}'.format(args.prefix, args.query_month), header=True)
+	samples.repartition(50).write.csv('/user/ronghui_safe/hgy/nid/datasets/{}_{}_{}'.format(args.prefix, args.query_month, args.mode), header=True)
