@@ -168,9 +168,8 @@ if __name__ == '__main__':
 
 	print('====> Start computation')
 	pairs = getAndroidPairs(spark, data_date)
-	#pairs = pairs.withColumn('source', F.when(pairs.source.isNull(), 'null').otherwise(pairs.source))
 	if args.kind == 'bias':
-		phones = spark.read.csv('/user/ronghui_safe/hgy/nid/samples/{}'.format(args.query_month), header=True).select('phone_salt').distinct()
+		phones = spark.read.csv('/user/ronghui_safe/hgy/nid/samples/{}_{}'.format(args.query_month, args.mode), header=True).select('phone_salt').distinct()
 		pairs = pairs.join(phones, on='phone_salt', how='inner')
 		features = pairs.rdd.map(lambda row: (row['phone_salt'], row)).groupByKey().flatMap(generateBias).toDF()
 		features.repartition(50).write.csv('/user/ronghui_safe/hgy/nid/features/bias_{}_{}'.format(args.query_month, args.mode), header=True)
