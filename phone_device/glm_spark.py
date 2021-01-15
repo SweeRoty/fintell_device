@@ -40,6 +40,7 @@ if __name__ == '__main__':
 	print('====> Parsing local arguments')
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--query_month', type=str, help='The format should be YYYYmm')
+	parser.add_argument('--prefix', type=str, choices=['sampled', 'all'], default='sampled')
 	parser.add_argument('--mode', type=str, choices=['train', 'test'], default='train')
 	parser.add_argument('--save_model', action='store_true', default=False)
 	args = parser.parse_args()
@@ -47,7 +48,7 @@ if __name__ == '__main__':
 	data_date = args.query_month+month_end
 
 	print('====> Start computation')
-	dataset = spark.read.csv('/user/ronghui_safe/hgy/nid/datasets/{}'.format(args.query_month), header=True, inferSchema=True)
+	dataset = spark.read.csv('/user/ronghui_safe/hgy/nid/datasets/{}_{}'.format(args.prefix, args.query_month), header=True, inferSchema=True)
 	#if args.mode == 'train':
 	dataset = dataset.withColumn('duration', F.when(F.col('duration') == 0, 1e-6).otherwise(F.col('duration')))
 	dataset = dataset.withColumn('duration', F.log(F.lit(1e-6))/F.col('duration'))
@@ -81,7 +82,7 @@ if __name__ == '__main__':
 	dataset = scaler_model.transform(dataset)
 	polyExpansion = PolynomialExpansion(degree=2, inputCol='scaled_feature_vec', outputCol='polyFeatures')
 	dataset = polyExpansion.transform(dataset)
-	dataset = dataset.select(F.col('duration'), F.col('polyFeatures')).cache()
+	dataset = dataset.select(F.col('duration'), F.col('polyFeatures'), F.col('key')).cache()
 	glr = None
 	if args.mode == 'train':
 		glr = GeneralizedLinearRegression(labelCol='duration', featuresCol='polyFeatures', family='Binomial', linkPredictionCol='link_pred')
@@ -100,6 +101,7 @@ if __name__ == '__main__':
 	else:
 		#glr_model = GeneralizedLinearRegressionModel.load('/user/ronghui_safe/hgy/nid/models/glm_binomial_model')
 		glr_model = TrainValidationSplitModel.load('/user/ronghui_safe/hgy/nid/models/glm_binomial_model')
-		dataset = glr_model.transform(dataset)
+		dataset = glr_model.transform(dataset).select(F.col('duration'), F.col('prediction'), F.col('key')).cache()
 		evaluator = RegressionEvaluator(predictionCol='prediction', labelCol='duration', metricName='mae')
 		print('----> The performance on the whole dataset is {}'.format(round(evaluator.evaluate(dataset), 4)))
+		dataset.drop('duration').repartition(50).write.csv('/user/ronghui_safe/hgy/nid/weights/{}_{}'.format(args.prefix, args.query_month), header=True)
