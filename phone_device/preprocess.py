@@ -36,7 +36,7 @@ if __name__ == '__main__':
 	parser.add_argument('--query_month', type=str, help='The format should be YYYYmm')
 	parser.add_argument('--print_y_dist', action='store_true', default=False)
 	parser.add_argument('--pca', action='store_true', default=False)
-	parser.add_argument('--mode', type=str, choices=['train', 'test'])
+	parser.add_argument('--mode', type=str, choices=['train', 'eval', 'test'])
 	parser.add_argument('--prefix', type=str, choices=['sampled', 'all'], default='sampled')
 	args = parser.parse_args()
 	month_end = str(monthrange(int(args.query_month[:4]), int(args.query_month[4:6]))[1])
