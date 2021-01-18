@@ -11,6 +11,7 @@ import time
 from pyspark import SparkConf
 from pyspark.sql import functions as F
 from pyspark.sql import Row, SparkSession
+from pyspark.sql.window import Window
 
 def getAndroidPairs(spark, data_date):
 	global start_time, end_time
@@ -156,7 +157,7 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--query_month', type=str, help='The format should be YYYYmm')
 	parser.add_argument('--kind', type=str, choices=['bias', 'sample'])
-	parser.add_argument('--mode', type=str, choices=['train', 'test'])
+	parser.add_argument('--mode', type=str, choices=['train', 'eval', 'test'])
 	args = parser.parse_args()
 	month_end = str(monthrange(int(args.query_month[:4]), int(args.query_month[4:6]))[1])
 	data_date = args.query_month+month_end
@@ -175,12 +176,23 @@ if __name__ == '__main__':
 		features.repartition(50).write.csv('/user/ronghui_safe/hgy/nid/features/bias_{}_{}'.format(args.query_month, args.mode), header=True)
 	else:
 		phones = spark.read.csv('/user/ronghui_safe/hgy/nid/active_phone_imei_count_{}'.format(args.query_month), header=True)
-		if args.mode == 'train':
+		if args.mode != 'test':
 			phones = phones.where(F.col('imei_count').between(2, 120))
-		phones = phones.select(F.col('phone').alias('phone_salt'))#.sample(False, 0.05, 11267)
-		pairs = pairs.join(phones, on='phone_salt', how='inner')
+			phones = phones.select(F.col('phone').alias('phone_salt'))#.sample(False, 0.05, 11267)
+			pairs = pairs.join(phones, on='phone_salt', how='inner')
+		else:
+			phones_1 = phones.where(F.col('imei_count').between(1, 120))
+			phones_1 = phones_1.select(F.col('phone').alias('phone_salt'))
+			pairs_1 = pairs.join(phones_1, on='phone_salt', how='inner')
+			phones_2 = phones.where(F.col('imei_count') > 120)
+			phones_2 = phones_2.select(F.col('phone').alias('phone_salt'))
+			pairs_2 = pairs.join(phones_2, on='phone_salt', how='inner')
+			pairs_2 = pairs_2.withColumn('key', F.concat_ws('_', F.col('phone_salt'), F.col('imei')))
+			pairs_2 = pairs_2.withColumn('row_num', F.row_number().over(Window.partitionBy('key').orderBy(F.col('itime').desc())))
+			pairs_2 = pairs_2.where(F.col('row_num') <= 120).select(pairs_1.columns)
+			pairs = pairs_1.union(pairs_2)
 		samples = None
-		if args.mode == 'train':
+		if args.mode != 'test':
 			samples = pairs.rdd.map(lambda row: (row['phone_salt'], row)).groupByKey().flatMap(generateLabels).toDF()
 			phone_min_itime = pairs.rdd \
 									.map(lambda row: (row['phone_salt'], row['itime'])) \
