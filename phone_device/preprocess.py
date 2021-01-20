@@ -45,7 +45,8 @@ if __name__ == '__main__':
 	print('====> Start computation')
 	samples = spark.read.csv('/user/ronghui_safe/hgy/nid/samples/{}_{}'.format(args.query_month, args.mode), header=True)
 	samples = samples.withColumn('key', F.concat_ws('_', F.col('phone_salt'), F.col('imei'), F.col('itime'), F.col('source')))
-	samples = samples.withColumn('duration', F.round(F.col('duration')/F.lit(24*3600), scale=2))
+	if args.mode != 'test':
+		samples = samples.withColumn('duration', F.round(F.col('duration')/F.lit(24*3600), scale=2))
 	samples = samples.withColumn('itime', F.col('itime').cast(IntegerType()))
 	samples = samples.withColumn('min_itime', F.col('min_itime').cast(IntegerType()))
 	samples = samples.withColumn('aging', F.round((F.col('itime')-F.col('min_itime'))/F.lit(24*3600), scale=2))
