@@ -171,8 +171,8 @@ if __name__ == '__main__':
 	pairs = getAndroidPairs(spark, data_date)
 	if args.kind == 'bias':
 		phones = spark.read.csv('/user/ronghui_safe/hgy/nid/samples/{}_{}'.format(args.query_month, args.mode), header=True).select('phone_salt').distinct()
-		pairs = pairs.join(phones, on='phone_salt', how='inner')
-		features = pairs.rdd.map(lambda row: (row['phone_salt'], row)).groupByKey().flatMap(generateBias).toDF()
+		pairs = pairs.join(phones, on='phone_salt', how='inner').repartition(40000)
+		features = pairs.rdd.map(lambda row: (row['phone_salt'], row)).groupByKey(40000).flatMap(generateBias).toDF()
 		features.repartition(50).write.csv('/user/ronghui_safe/hgy/nid/features/bias_{}_{}'.format(args.query_month, args.mode), header=True)
 	else:
 		phones = spark.read.csv('/user/ronghui_safe/hgy/nid/active_phone_imei_count_{}'.format(args.query_month), header=True)
@@ -183,25 +183,19 @@ if __name__ == '__main__':
 		else:
 			phones_1 = phones.where(F.col('imei_count').between(1, 120))
 			phones_1 = phones_1.select(F.col('phone').alias('phone_salt'))
-			pairs_1 = pairs.join(phones_1, on='phone_salt', how='inner')
-			phones_2 = phones.where(F.col('imei_count') > 120)
-			phones_2 = phones_2.select(F.col('phone').alias('phone_salt'))
-			pairs_2 = pairs.join(phones_2, on='phone_salt', how='inner')
-			pairs_2 = pairs_2.withColumn('key', F.concat_ws('_', F.col('phone_salt'), F.col('imei')))
-			pairs_2 = pairs_2.withColumn('row_num', F.row_number().over(Window.partitionBy('key').orderBy(F.col('itime').desc())))
-			pairs_2 = pairs_2.where(F.col('row_num') <= 120).select(pairs_1.columns)
-			pairs = pairs_1.union(pairs_2)
+			pairs = pairs.join(phones_1, on='phone_salt', how='inner')
 		samples = None
+		phone_min_itime = pairs.rdd \
+								.map(lambda row: (row['phone_salt'], row['itime'])) \
+								.reduceByKey(lambda x, y: min(x, y)) \
+								.map(lambda t: Row(phone_salt=t[0], min_itime=t[1])) \
+								.toDF()
 		if args.mode != 'test':
 			samples = pairs.rdd.map(lambda row: (row['phone_salt'], row)).groupByKey().flatMap(generateLabels).toDF()
-			phone_min_itime = pairs.rdd \
-									.map(lambda row: (row['phone_salt'], row['itime'])) \
-									.reduceByKey(lambda x, y: min(x, y)) \
-									.map(lambda t: Row(phone_salt=t[0], min_itime=t[1])) \
-									.toDF() \
-									.where(F.col('min_itime') >= begin_time)
+			phone_min_itime = phone_min_itime.where(F.col('min_itime') >= begin_time)
 			samples = samples.join(phone_min_itime, on='phone_salt', how='inner')
 		else:
 			samples = pairs.withColumn('duration', F.lit(-1))
 			samples = samples.select(['source', 'duration', 'phone_salt', 'imei', 'itime'])
+			samples = samples.join(phone_min_itime, on='phone_salt', how='inner')
 		samples.repartition(50).write.csv('/user/ronghui_safe/hgy/nid/samples/{}_{}'.format(args.query_month, args.mode), header=True)
