@@ -49,10 +49,11 @@ if __name__ == '__main__':
 
 	print('====> Start computation')
 	dataset = spark.read.csv('/user/ronghui_safe/hgy/nid/datasets/{}_{}_{}'.format(args.prefix, args.query_month, args.mode), header=True, inferSchema=True)
-	#if args.mode == 'train':
-	dataset = dataset.withColumn('duration', F.when(F.col('duration') == 0, 1e-6).otherwise(F.col('duration')))
-	dataset = dataset.withColumn('duration', F.log(F.lit(1e-6))/F.col('duration'))
-	dataset = dataset.withColumn('duration', F.exp(F.col('duration')))
+	dataset = dataset.withColumn('source', F.when(F.col('source') == '__HIVE_DEFAULT_PARTITION__', 'null').otherwise(F.col('source')))
+	if args.mode != 'test':
+		dataset = dataset.withColumn('duration', F.when(F.col('duration') == 0, 1e-6).otherwise(F.col('duration')))
+		dataset = dataset.withColumn('duration', F.log(F.lit(1e-6))/F.col('duration'))
+		dataset = dataset.withColumn('duration', F.exp(F.col('duration')))
 	stringIndex_model = None
 	if args.mode == 'train':
 		stringIndexer = StringIndexer(inputCol='source', outputCol='source_index')
@@ -82,7 +83,7 @@ if __name__ == '__main__':
 	dataset = scaler_model.transform(dataset)
 	polyExpansion = PolynomialExpansion(degree=2, inputCol='scaled_feature_vec', outputCol='polyFeatures')
 	dataset = polyExpansion.transform(dataset)
-	dataset = dataset.select(F.col('duration'), F.col('polyFeatures'), F.col('phone_salt'), F.col('imei')).cache()
+	dataset = dataset.select(F.col('duration'), F.col('polyFeatures'), F.col('key')).cache()
 	glr = None
 	if args.mode == 'train':
 		glr = GeneralizedLinearRegression(labelCol='duration', featuresCol='polyFeatures', family='Binomial', linkPredictionCol='link_pred')
@@ -101,7 +102,7 @@ if __name__ == '__main__':
 	else:
 		#glr_model = GeneralizedLinearRegressionModel.load('/user/ronghui_safe/hgy/nid/models/glm_binomial_model')
 		glr_model = TrainValidationSplitModel.load('/user/ronghui_safe/hgy/nid/models/glm_binomial_model')
-		dataset = glr_model.transform(dataset).select(F.col('duration'), F.col('prediction'), F.col('phone_salt'), F.col('imei')).cache()
+		dataset = glr_model.transform(dataset).select(F.col('duration'), F.col('prediction'), F.col('key')).cache()
 		if args.mode == 'eval':
 			evaluator = RegressionEvaluator(predictionCol='prediction', labelCol='duration', metricName='r2')
 			print('----> The performance on the whole dataset is {}'.format(round(evaluator.evaluate(dataset), 4)))
