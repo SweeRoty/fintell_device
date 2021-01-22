@@ -99,8 +99,8 @@ if __name__ == '__main__':
 	print('====> Parsing local arguments')
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--query_month', type=str, help='The format should be YYYYmm')
-	parser.add_argument('--is_source_stats', action='store_true', default=False)
-	parser.add_argument('--is_diff_stats', action='store_true', default=False)
+	parser.add_argument('--print_source_stats', action='store_true', default=False)
+	parser.add_argument('--print_diff_stats', action='store_true', default=False)
 	args = parser.parse_args()
 	month_end = str(monthrange(int(args.query_month[:4]), int(args.query_month[4:6]))[1])
 	data_date = args.query_month+month_end
@@ -112,7 +112,7 @@ if __name__ == '__main__':
 	print('====> Start computation')
 	pairs = getAndroidPairs(spark, data_date)
 
-	if args.is_source_stats:
+	if args.print_source_stats:
 		stats = pairs.groupBy('source').agg(F.count('phone_salt').alias('record_count')).collect()
 		for row in stats:
 			print('----> The count for source {} is {}'.format(row['source'], row['record_count']))
@@ -123,7 +123,7 @@ if __name__ == '__main__':
 	phones = pairs.join(devices, on='imei', how='inner').select('phone_salt').distinct()
 	pairs = pairs.join(phones, on='phone_salt', how='inner')
 
-	if args.is_diff_stats:
+	if args.print_diff_stats:
 		diffs = pairs.rdd.map(lambda row: (row['phone_salt'], row['itime'])).reduceByKey(lambda x, y: min([x, y])).map(transform2row).toDF()
 		diffs = diffs.withColumn('diff', F.datediff(F.lit(end_date), F.from_unixtime(F.col('min_itime'), 'yyyy-MM-dd')))
 		quantiles = diffs.approxQuantile('diff', [0.75, 0.5, 0.25], 0.02)
