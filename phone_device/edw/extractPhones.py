@@ -84,8 +84,7 @@ if __name__ == '__main__':
 	month_end = str(monthrange(int(args.query_month[:4]), int(args.query_month[4:6]))[1])
 	data_date = args.query_month+month_end
 	start_time = time.mktime(datetime.strptime('2016-01-01', '%Y-%m-%d').timetuple())
-	end_date = datetime.strptime('{} 23:59:59'.format(data_date), '%Y%m%d %H:%M:%S')
-	end_time = time.mktime(end_date.timetuple())
+	end_time = time.mktime(datetime.strptime('{} 23:59:59'.format(data_date), '%Y%m%d %H:%M:%S').timetuple())
 
 	print('====> Start computation')
 	pairs = getAndroidPairs(spark, data_date)
@@ -105,4 +104,4 @@ if __name__ == '__main__':
 	phone_stats = phone_stats.rdd.map(lambda row: (row['phone_salt'], 1)).reduceByKey(add).map(lambda t: {'phone_salt':t[0], 'imei_count':t[1]}).map(transform2row).toDF()
 	phone_stats = phone_stats.join(phone_min_itime, on='phone_salt', how='inner')
 	phone_stats = phone_stats.registerTempTable('tmp')
-	spark.sql('''INSERT OVERWRITE TABLE ronghui.hgy_07 PARTITION (data_date = '{0}') SELECT * FROM tmp'''.format(args.query_month)).collect()
+	spark.sql('''INSERT OVERWRITE TABLE tmp.step1_phone PARTITION (data_date = '{0}') SELECT * FROM tmp'''.format(args.query_month)).collect()
