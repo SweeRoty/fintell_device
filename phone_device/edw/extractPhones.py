@@ -103,5 +103,6 @@ if __name__ == '__main__':
 	phone_stats = pairs.select(['phone_salt', 'imei']).distinct()
 	phone_stats = phone_stats.rdd.map(lambda row: (row['phone_salt'], 1)).reduceByKey(add).map(lambda t: {'phone_salt':t[0], 'imei_count':t[1]}).map(transform2row).toDF()
 	phone_stats = phone_stats.join(phone_min_itime, on='phone_salt', how='inner')
+	phone_stats = phone_stats.select(['phone_salt', 'imei_count', 'min_itime'])
 	phone_stats = phone_stats.registerTempTable('tmp')
 	spark.sql('''INSERT OVERWRITE TABLE tmp.step1_phone PARTITION (data_date = '{0}') SELECT * FROM tmp'''.format(args.query_month)).collect()
