@@ -86,7 +86,6 @@ if __name__ == '__main__':
 	start_time = time.mktime(datetime.strptime('2016-01-01', '%Y-%m-%d').timetuple())
 	end_date = datetime.strptime('{} 23:59:59'.format(data_date), '%Y%m%d %H:%M:%S')
 	end_time = time.mktime(end_date.timetuple())
-	end_date = end_date.strftime('%Y-%m-%d')
 
 	print('====> Start computation')
 	pairs = getAndroidPairs(spark, data_date)
