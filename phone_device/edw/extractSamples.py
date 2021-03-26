@@ -34,6 +34,14 @@ def getAndroidPairs(spark, data_date):
 
 def getValidPhones(spark, data_date):
 	sql = """
+		select
+			phone_salt,
+			imei_count,
+			min_itime
+		from
+			tmp.step1_phone
+		where
+			data_date = '{0}'
 	""".format(data_date)
 	print(sql)
 	phones = spark.sql(sql)
@@ -67,8 +75,8 @@ if __name__ == '__main__':
 	print('====> Start computation')
 	pairs = getAndroidPairs(spark, data_date)
 	phones = getValidPhones(spark, data_date)
-	phones = phones.where(F.col('imei_count').between(1, 20))
+	phones = phones.where(F.col('imei_count').between(1, 20)).drop('imei_count')
 	pairs = pairs.join(phones, on='phone_salt', how='inner')
 	samples = samples.select(['phone_salt', 'imei', 'itime', 'source', 'min_itime'])
 	samples = samples.registerTempTable('tmp')
-	spark.sql('''INSERT OVERWRITE TABLE ronghui.hgy_07 PARTITION (data_date = '{0}') SELECT * FROM tmp'''.format(args.query_month)).collect()
+	spark.sql('''INSERT OVERWRITE TABLE tmp.step2_sample PARTITION (data_date = '{0}') SELECT * FROM tmp'''.format(args.query_month)).collect()
