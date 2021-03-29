@@ -32,9 +32,15 @@ def getAndroidPairs(spark, data_date):
 	pairs = spark.sql(sql)
 	return pairs
 
-def getValidPhones(spark, data_date):
+def getValidPhones(spark, query_month):
 	sql = """
-	""".format(data_date)
+		select
+			distinct phone_salt
+		from
+			tmp.step2_sample
+		where
+			data_date = '{0}'
+	""".format(query_month)
 	print(sql)
 	phones = spark.sql(sql)
 	return phones
@@ -93,11 +99,31 @@ if __name__ == '__main__':
 
 	print('====> Start computation')
 	pairs = getAndroidPairs(spark, data_date)
-	phones = getValidPhones(spark, data_date)
-	pairs = pairs.join(phones.select('phone_salt').distinct(), on='phone_salt', how='inner').repartition(40000)
+	phones = getValidPhones(spark, args.query_month)
+	pairs = pairs.join(phones, on='phone_salt', how='inner').repartition(40000)
 	features = pairs.rdd.map(lambda row: (row['phone_salt'], row)).groupByKey(40000)
 	phone_stats = features.map(lambda t: Row(phone_salt=t[0], record_count=len(t[1]))).toDF()
 	phone_stats = phone_stats.where(F.col('record_count') < args.thres).rdd.map(lambda row: (row['phone_salt'], None))
 	features = features.join(phone_stats).map(lambda t: (t[0], t[1][0])).flatMap(generateBias).toDF()
 	features = features.where(F.col('itime') >= sample_start_time)
-	spark.sql('''INSERT OVERWRITE TABLE ronghui.hgy_07 PARTITION (data_date = '{0}') SELECT * FROM tmp'''.format(args.query_month)).collect()
+	features = features.select(['phone_salt', 
+								'imei', 
+								'itime', 
+								'source', 
+								'record_count_in_365',
+								'device_count_in_365',
+								'source_count_in_365',
+								'record_count_in_180',
+								'device_count_in_180',
+								'source_count_in_180',
+								'record_count_in_90',
+								'device_count_in_90',
+								'source_count_in_90',
+								'record_count_in_30',
+								'device_count_in_30',
+								'source_count_in_30',
+								'record_count_in_7',
+								'device_count_in_7',
+								'source_count_in_7'])
+	samples = samples.registerTempTable('tmp')
+	spark.sql('''INSERT OVERWRITE TABLE tmp.step3_feature PARTITION (data_date = '{0}') SELECT * FROM tmp'''.format(args.query_month)).collect()
