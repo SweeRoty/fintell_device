@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import division
 from calendar import monthrange
 from ConfigParser import RawConfigParser
 from datetime import datetime
