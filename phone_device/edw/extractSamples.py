@@ -32,7 +32,7 @@ def getAndroidPairs(spark, data_date):
 	pairs = spark.sql(sql)
 	return pairs
 
-def getValidPhones(spark, data_date):
+def getValidPhones(spark, query_month):
 	sql = """
 		select
 			phone_salt,
@@ -42,7 +42,7 @@ def getValidPhones(spark, data_date):
 			tmp.step1_phone
 		where
 			data_date = '{0}'
-	""".format(data_date)
+	""".format(query_month)
 	print(sql)
 	phones = spark.sql(sql)
 	return phones
@@ -74,7 +74,7 @@ if __name__ == '__main__':
 
 	print('====> Start computation')
 	pairs = getAndroidPairs(spark, data_date)
-	phones = getValidPhones(spark, data_date)
+	phones = getValidPhones(spark, args.query_month)
 	phones = phones.where(F.col('imei_count').between(1, 20)).drop('imei_count')
 	pairs = pairs.join(phones, on='phone_salt', how='inner')
 	samples = samples.select(['phone_salt', 'imei', 'itime', 'source', 'min_itime'])
