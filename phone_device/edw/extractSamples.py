@@ -77,5 +77,5 @@ if __name__ == '__main__':
 	phones = phones.where(F.col('imei_count').between(1, 20)).drop('imei_count')
 	pairs = pairs.join(phones, on='phone_salt', how='inner')
 	samples = samples.select(['phone_salt', 'imei', 'itime', 'source', 'min_itime'])
-	samples = samples.registerTempTable('tmp')
-	spark.sql('''INSERT OVERWRITE TABLE tmp.step2_sample PARTITION (data_date = '{0}') SELECT * FROM tmp'''.format(args.query_month)).collect()
+	samples = samples.registerTempTable('temp')
+	spark.sql('''INSERT OVERWRITE TABLE tmp.step2_sample PARTITION (data_date = '{0}') SELECT * FROM temp'''.format(args.query_month)).collect()

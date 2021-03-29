@@ -125,5 +125,5 @@ if __name__ == '__main__':
 								'record_count_in_7',
 								'device_count_in_7',
 								'source_count_in_7'])
-	samples = samples.registerTempTable('tmp')
-	spark.sql('''INSERT OVERWRITE TABLE tmp.step3_feature PARTITION (data_date = '{0}') SELECT * FROM tmp'''.format(args.query_month)).collect()
+	samples = samples.registerTempTable('temp')
+	spark.sql('''INSERT OVERWRITE TABLE tmp.step3_feature PARTITION (data_date = '{0}') SELECT * FROM temp'''.format(args.query_month)).collect()
