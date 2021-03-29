@@ -52,5 +52,12 @@ row format serde
 	'org.apache.hadoop.hive.ql.io.orc.OrcSerde'
 stored as orc;
 describe tmp.step4_dataset;
+
+create table if not exists step5_weight (key string, prediction float)
+partitioned by (data_date string)
+row format serde
+	'org.apache.hadoop.hive.ql.io.orc.OrcSerde'
+stored as orc;
+describe tmp.step5_weight;
 "
 beeline -e "$job" > log_create_tmp_table
