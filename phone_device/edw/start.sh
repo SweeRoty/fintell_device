@@ -21,6 +21,10 @@ stored as orc;
 describe tmp.step2_sample;
 
 create table if not exists step3_feature (
+	phone_salt string,
+	imei string,
+	itime int,
+	source string,
 	record_count_in_365 int, 
 	device_count_in_365 int,
 	source_count_in_365 int,
@@ -41,5 +45,12 @@ row format serde
 	'org.apache.hadoop.hive.ql.io.orc.OrcSerde'
 stored as orc;
 describe tmp.step3_feature;
+
+create table if not exists step4_dataset (key string, aging float, PC1 float, PC2 float, PC3 float, PC4 float)
+partitioned by (data_date string)
+row format serde
+	'org.apache.hadoop.hive.ql.io.orc.OrcSerde'
+stored as orc;
+describe tmp.step4_dataset;
 "
 beeline -e "$job" > log_create_tmp_table
