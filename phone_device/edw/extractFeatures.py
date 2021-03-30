@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import division
 from calendar import monthrange
 from ConfigParser import RawConfigParser
 from datetime import datetime
@@ -77,7 +76,7 @@ if __name__ == '__main__':
 	for t in localConf.items('spark-config'):
 		sparkConf.set(t[0], t[1])
 	spark = SparkSession.builder \
-			.appName('RLab_ID_Project___Extract_Bias') \
+			.appName('RLab_ID_Project___Extract_Features') \
 			.config(conf=sparkConf) \
 			.enableHiveSupport() \
 			.getOrCreate()
