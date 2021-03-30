@@ -5,9 +5,7 @@ from ConfigParser import RawConfigParser
 import argparse
 
 from pyspark import SparkConf
-from pyspark.ml.feature import PCA, PCAModel
-from pyspark.ml.feature import StandardScaler, StandardScalerModel
-from pyspark.ml.feature import VectorAssembler
+from pyspark.ml.feature import PCAModel, StandardScalerModel, VectorAssembler
 from pyspark.ml.stat import Correlation
 from pyspark.sql import functions as F
 from pyspark.sql import Row, SparkSession
