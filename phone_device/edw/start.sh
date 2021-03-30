@@ -59,5 +59,12 @@ row format serde
 	'org.apache.hadoop.hive.ql.io.orc.OrcSerde'
 stored as orc;
 describe tmp.step5_weight;
+
+create table if not exists step6_edge (phone_salt string, imei string, edge_weight float)
+partitioned by (data_date string)
+row format serde
+	'org.apache.hadoop.hive.ql.io.orc.OrcSerde'
+stored as orc;
+describe tmp.step6_edge;
 "
 beeline -e "$job" > log_create_tmp_table
