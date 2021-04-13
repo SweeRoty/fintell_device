@@ -84,7 +84,7 @@ if __name__ == '__main__':
 	print('====> Initializing Spark APP')
 	localConf = RawConfigParser()
 	localConf.optionxform = str
-	localConf.read('../config')
+	localConf.read('../../config')
 	sparkConf = SparkConf()
 	for t in localConf.items('spark-config'):
 		sparkConf.set(t[0], t[1])
@@ -101,6 +101,7 @@ if __name__ == '__main__':
 	parser.add_argument('--query_month', type=str, help='The format should be YYYYmm')
 	parser.add_argument('--print_source_stats', action='store_true', default=False)
 	parser.add_argument('--print_diff_stats', action='store_true', default=False)
+	parser.add_argument('--save_record_count', action='store_true', default=False)
 	args = parser.parse_args()
 	month_end = str(monthrange(int(args.query_month[:4]), int(args.query_month[4:6]))[1])
 	data_date = args.query_month+month_end
@@ -133,9 +134,10 @@ if __name__ == '__main__':
 		print(diffs.describe('diff').show())
 		print('<----')
 
-	phone_stats = pairs.rdd.map(lambda row: (row['phone_salt'], 1)).reduceByKey(add).map(lambda t: {'phone':t[0], 'count':t[1]}).map(transform2row).toDF()
-	phone_stats.repartition(1).write.csv('/user/ronghui_safe/hgy/nid/active_phone_count_{}'.format(args.query_month), header=True)
+	if args.save_record_count:
+		phone_stats = pairs.rdd.map(lambda row: (row['phone_salt'], 1)).reduceByKey(add).map(lambda t: {'phone':t[0], 'count':t[1]}).map(transform2row).toDF()
+		phone_stats.repartition(1).write.csv('/user/ronghui_safe/hgy/nid/phone/record_count_{}'.format(args.query_month), header=True)
 
 	phone_stats = pairs.select(['phone_salt', 'imei']).distinct()
 	phone_stats = phone_stats.rdd.map(lambda row: (row['phone_salt'], 1)).reduceByKey(add).map(lambda t: {'phone':t[0], 'imei_count':t[1]}).map(transform2row).toDF()
-	phone_stats.repartition(1).write.csv('/user/ronghui_safe/hgy/nid/active_phone_imei_count_{}'.format(args.query_month), header=True)
+	phone_stats.repartition(1).write.csv('/user/ronghui_safe/hgy/nid/phone/{}'.format(args.query_month), header=True)
