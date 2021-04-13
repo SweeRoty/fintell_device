@@ -1,18 +1,23 @@
-### Phone-Device bipartite
+## Phone-Device bipartite
 
-#### 1. Extract valid phones with their device(imei) count stats with optional printing arguments
-`nohup spark-submit extract_phone_with_stats.py --query_month 201911 &`
+### 1. Extract valid phones with their device(imei) count stats with optional printing arguments
+`nohup spark-submit extractPhones.py --query_month 202101 &`
 
-#### 2. Generate samples or bias features for the training, evaluation or inference of the mapping model
-`nohup spark-submit processSeq.py --query_month 201911 --kind sample --mode train &`
+### 2. Generate samples under different modes
+`nohup spark-submit extractSamples.py --query_month 202101 --mode test &`
 
-#### 3. Preprocess the input data for the training, evaluation or inference of the mapping model
-`nohup spark-submit preprocess.py --query_month 201911 --pca -- mode train --prefix all &`
+### 3. Extract bias features under different modes
+`nohup spark-submit extractFeatures.py --query_month 202101 --mode test &`
 
-P.S.: the *prefix* argument is optional which specifies whether you have sampled the data in Step 2
+### 4. Preprocess the input data
+`nohup spark-submit preprocess.py --query_month 202101 --pca -- mode test &`
 
-#### 4. Model training, evaluation or inference
-`nohup spark-submit glm_spark.py --query_month 201911 --prefix all --mode train --save_model &`
+### 5. Model training, evaluation or inference
+`nohup /opt/spark3/bin/spark-submit glm_spark.py --query_month 202101 --mode test &`
 
-#### 5. Weighted aggregation of the phone-device bipartite
-`nohup spark-submit aggregate.py --query_month 201911 --prefix all --mode test --print_part1 --print_part2_org --print_part2_new &`
+### X. Weighted aggregation of the phone-device bipartite
+`nohup spark-submit aggregate.py --query_month 202101 --mode test --print_part1 --print_part2_org --print_part2_new &`
+
+### 6. Construct the bipartite
+
+### 7. Output the FID
