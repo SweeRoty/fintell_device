@@ -67,18 +67,18 @@ if __name__ == '__main__':
 		if args.mode == 'train':
 			scaler = StandardScaler(inputCol='feature_vec', outputCol='scaled_feature_vec', withStd=False, withMean=True)
 			scaler_model = scaler.fit(features)
-			scaler_model.save('/user/ronghui_safe/hgy/nid/models/scaler_pca_model_v2')
+			scaler_model.save('/user/ronghui_safe/hgy/nid/edw/scaler_pca_model_v2')
 		else:
-			scaler_model = StandardScalerModel.load('/user/ronghui_safe/hgy/nid/models/scaler_pca_model_v2')
+			scaler_model = StandardScalerModel.load('/user/ronghui_safe/hgy/nid/edw/scaler_pca_model_v2')
 		features = scaler_model.transform(features).select('key', 'scaled_feature_vec')
 		pca_model = None
 		if args.mode == 'train':
 			pca = PCA(k=len(feature_cols), inputCol='scaled_feature_vec', outputCol='components')
 			pca_model = pca.fit(features)
 			print('----> Explained variance is {}'.format(pca_model.explainedVariance.toArray().tolist()))
-			pca_model.save('/user/ronghui_safe/hgy/nid/models/pca_model_v2')
+			pca_model.save('/user/ronghui_safe/hgy/nid/edw/pca_model_v2')
 		else:
-			pca_model = PCAModel.load('/user/ronghui_safe/hgy/nid/models/pca_model_v2')
+			pca_model = PCAModel.load('/user/ronghui_safe/hgy/nid/edw/pca_model_v2')
 			print('----> Explained variance is {}'.format(pca_model.explainedVariance.toArray().tolist()))
 		features = pca_model.transform(features).select('key', 'components').rdd.map(lambda row: Row(key=row['key'], PC1=round(row['components'][0], 4), PC2=round(row['components'][1], 4), PC3=round(row['components'][2], 4), PC4=round(row['components'][3], 4))).toDF()
 	samples = samples.join(features, on='key', how='inner')
