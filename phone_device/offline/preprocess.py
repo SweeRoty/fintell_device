@@ -19,7 +19,7 @@ def transform2row(t):
 if __name__ == '__main__':
 	print('====> Initializing Spark APP')
 	localConf = RawConfigParser()
-	localConf.read('../config')
+	localConf.read('../../config')
 	sparkConf = SparkConf()
 	for t in localConf.items('spark-config'):
 		sparkConf.set(t[0], t[1])
@@ -37,7 +37,6 @@ if __name__ == '__main__':
 	parser.add_argument('--print_y_dist', action='store_true', default=False)
 	parser.add_argument('--pca', action='store_true', default=False)
 	parser.add_argument('--mode', type=str, choices=['train', 'eval', 'test'])
-	parser.add_argument('--prefix', type=str, choices=['sampled', 'all'], default='sampled')
 	args = parser.parse_args()
 	month_end = str(monthrange(int(args.query_month[:4]), int(args.query_month[4:6]))[1])
 	data_date = args.query_month+month_end
@@ -68,19 +67,19 @@ if __name__ == '__main__':
 		if args.mode == 'train':
 			scaler = StandardScaler(inputCol='feature_vec', outputCol='scaled_feature_vec', withStd=False, withMean=True)
 			scaler_model = scaler.fit(features)
-			scaler_model.save('/user/ronghui_safe/hgy/nid/models/scaler_pca_model')
+			scaler_model.save('/user/ronghui_safe/hgy/nid/models/scaler_pca_model_v2')
 		else:
-			scaler_model = StandardScalerModel.load('/user/ronghui_safe/hgy/nid/models/scaler_pca_model')
+			scaler_model = StandardScalerModel.load('/user/ronghui_safe/hgy/nid/models/scaler_pca_model_v2')
 		features = scaler_model.transform(features).select('key', 'scaled_feature_vec')
 		pca_model = None
 		if args.mode == 'train':
 			pca = PCA(k=len(feature_cols), inputCol='scaled_feature_vec', outputCol='components')
 			pca_model = pca.fit(features)
 			print('----> Explained variance is {}'.format(pca_model.explainedVariance.toArray().tolist()))
-			pca_model.save('/user/ronghui_safe/hgy/nid/models/pca_model')
+			pca_model.save('/user/ronghui_safe/hgy/nid/models/pca_model_v2')
 		else:
-			pca_model = PCAModel.load('/user/ronghui_safe/hgy/nid/models/pca_model')
+			pca_model = PCAModel.load('/user/ronghui_safe/hgy/nid/models/pca_model_v2')
 			print('----> Explained variance is {}'.format(pca_model.explainedVariance.toArray().tolist()))
-		features = pca_model.transform(features).select('key', 'components').rdd.map(lambda row: Row(key=row['key'], PC1=round(row['components'][0], 4), PC2=round(row['components'][1], 4))).toDF()
+		features = pca_model.transform(features).select('key', 'components').rdd.map(lambda row: Row(key=row['key'], PC1=round(row['components'][0], 4), PC2=round(row['components'][1], 4), PC3=round(row['components'][2], 4), PC4=round(row['components'][3], 4))).toDF()
 	samples = samples.join(features, on='key', how='inner')
-	samples.repartition(50).write.csv('/user/ronghui_safe/hgy/nid/datasets/{}_{}_{}'.format(args.prefix, args.query_month, args.mode), header=True)
+	samples.repartition(50).write.csv('/user/ronghui_safe/hgy/nid/datasets/{}_{}'.format(args.query_month, args.mode), header=True)
