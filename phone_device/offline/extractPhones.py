@@ -136,8 +136,8 @@ if __name__ == '__main__':
 
 	if args.save_record_count:
 		phone_stats = pairs.rdd.map(lambda row: (row['phone_salt'], 1)).reduceByKey(add).map(lambda t: {'phone':t[0], 'count':t[1]}).map(transform2row).toDF()
-		phone_stats.repartition(1).write.csv('/user/ronghui_safe/hgy/nid/phone/record_count_{}'.format(args.query_month), header=True)
+		phone_stats.repartition(1).write.csv('/user/ronghui_safe/hgy/nid/phones/record_count_{}'.format(args.query_month), header=True)
 
 	phone_stats = pairs.select(['phone_salt', 'imei']).distinct()
 	phone_stats = phone_stats.rdd.map(lambda row: (row['phone_salt'], 1)).reduceByKey(add).map(lambda t: {'phone':t[0], 'imei_count':t[1]}).map(transform2row).toDF()
-	phone_stats.repartition(1).write.csv('/user/ronghui_safe/hgy/nid/phone/{}'.format(args.query_month), header=True)
+	phone_stats.repartition(1).write.csv('/user/ronghui_safe/hgy/nid/phones/{}'.format(args.query_month), header=True)
