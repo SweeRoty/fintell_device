@@ -14,7 +14,6 @@ from pyspark.sql.types import IntegerType
 
 if __name__ == '__main__':
 	print('====> Initializing Spark APP')
-	#localConf = RawConfigParser()
 	localConf = configparser.ConfigParser()
 	localConf.optionxform = str
 	localConf.read('../../config')
