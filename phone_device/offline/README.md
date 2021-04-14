@@ -15,9 +15,11 @@
 ### 5. Model training, evaluation or inference
 `nohup /opt/spark3/bin/spark-submit glm_spark.py --query_month 202101 --mode test &`
 
-### X. Weighted aggregation of the phone-device bipartite
+#### (optional) Weighted aggregation of the phone-device bipartite
 `nohup spark-submit aggregate.py --query_month 202101 --mode test --print_part1 --print_part2_org --print_part2_new &`
 
 ### 6. Construct the bipartite
+`nohup spark-submit build_bipartite.py --query_month 202101 --mode test &`
 
 ### 7. Output the FID
+`nohup spark-submit bipartite_lpa.py --query_month 202101 --mode test &`
