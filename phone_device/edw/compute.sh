@@ -19,8 +19,8 @@ hadoop fs -put log_step4_$query_month /user/hive/warehouse/ronghui_bj.db/etl_v1_
 /opt/spark3/bin/spark-submit glm.py --query_month $query_month > log_step5_$query_month
 hadoop fs -put log_step5_$query_month /user/hive/warehouse/ronghui_bj.db/etl_v1_2/log/nid/
 
-spark-submit build_bipartite.py --query_month $query_month > log_step6_$query_month
-hadoop fs -put log_step6_$query_month /user/hive/warehouse/ronghui_bj.db/etl_v1_2/log/nid/
+#spark-submit build_bipartite.py --query_month $query_month > log_step6_$query_month
+#hadoop fs -put log_step6_$query_month /user/hive/warehouse/ronghui_bj.db/etl_v1_2/log/nid/
 
 spark-submit bipartite_lpa.py --query_month $query_month > log_step7_$query_month
 hadoop fs -put log_step7_$query_month /user/hive/warehouse/ronghui_bj.db/etl_v1_2/log/nid/
