@@ -72,7 +72,6 @@ if __name__ == '__main__':
 	print('====> Parsing local arguments')
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--query_month', type=str, help='The format should be YYYYmm')
-	parser.add_argument('--prefix', type=str, choices=['all', 'sampled'])
 	parser.add_argument('--mode', type=str, choices=['train', 'eval', 'test'])
 	parser.add_argument('--print_part1', action='store_true', default=False)
 	parser.add_argument('--print_part2_org', action='store_true', default=False)
@@ -84,7 +83,7 @@ if __name__ == '__main__':
 
 	print('====> Start computation')
 	samples = get_samples(spark, data_date)
-	weights = spark.read.csv('/user/ronghui_safe/hgy/nid/weights/{}_{}_{}'.format(args.prefix, args.query_month, args.mode), header=True, inferSchema=True)
+	weights = spark.read.csv('/user/ronghui_safe/hgy/nid/weights/{}_{}'.format(args.query_month, args.mode), header=True, inferSchema=True)
 	weights = weights.withColumn('phone_salt', F.split(F.col('key'), '_').getItem(0))
 	weights = weights.withColumn('imei', F.split(F.col('key'), '_').getItem(1))
 	weights = weights.withColumn('itime', F.split(F.col('key'), '_').getItem(2))
