@@ -71,4 +71,5 @@ if __name__ == '__main__':
 	dataset = glr_model.transform(dataset).select(F.col('prediction'), F.col('key'))
 	dataset = dataset.select(['key', 'prediction'])
 	dataset = dataset.registerTempTable('temp')
+	### table name below should be changed
 	spark.sql('''INSERT OVERWRITE TABLE tmp.step5_weight PARTITION (data_date = '{0}') SELECT * FROM temp'''.format(args.query_month)).collect()

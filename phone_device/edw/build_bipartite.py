@@ -17,9 +17,9 @@ def getWeights(spark, query_month):
 		select
 			*
 		from
-			tmp.step5_weight
+			tmp.step5_weight ### table name should be changed
 		where
-			data_date = '{0}'
+			data_date <= '{0}'
 	""".format(query_month)
 	print(sql)
 	weights = spark.sql(sql)
@@ -27,7 +27,6 @@ def getWeights(spark, query_month):
 
 if __name__ == '__main__':
 	print('====> Initializing Spark APP')
-	#localConf = RawConfigParser()
 	localConf = configparser.ConfigParser()
 	localConf.optionxform = str
 	localConf.read('./config')
