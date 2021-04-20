@@ -26,11 +26,14 @@ def getWeights(spark, query_month):
 def getID(spark, query_month):
 	sql = """
 		select
-			*
+			phone_salt,
+			fid,
+			row_number() over(partition by phone_salt order by data_date desc) row_num
 		from
 			tmp_phone ### table name should be filled in
 		where
-			data_date = '{0}'
+			data_date <= '{0}'
+			and row_num = 1
 	""".format(query_month)
 	print(sql)
 	ids = spark.sql(sql)
