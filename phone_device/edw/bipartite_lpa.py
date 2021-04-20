@@ -31,7 +31,7 @@ def getID(spark, query_month):
 			tmp_phone ### table name should be filled in
 		where
 			data_date = '{0}'
-	""".format()
+	""".format(query_month)
 	print(sql)
 	ids = spark.sql(sql)
 	return ids
@@ -91,7 +91,7 @@ if __name__ == '__main__':
 	weights = weights.withColumn('duration', F.lit(obs_time)-F.col('itime'))
 	weights = weights.withColumn('duration', F.round(F.col('duration')/F.lit(24*3600), scale=2))
 	weights = weights.withColumn('weight', F.pow(F.col('prediction'), F.col('duration')))
-	weights = weights.groupby(['phone_salt', 'imei']).agg(F.sum('weight').alias('weight'))
+	edges = weights.groupby(['phone_salt', 'imei']).agg(F.sum('weight').alias('weight'))
 
 	ids = getID(spark, query_month)
 	phones = edges.select('phone_salt').distinct()
